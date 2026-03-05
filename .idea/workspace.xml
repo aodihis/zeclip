@@ -11,11 +11,8 @@
     </cargoProject>
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="7ec1fdf1-6365-4c0c-a6f8-e0c31df81ee8" name="Changes" comment="init">
-      <change beforePath="$PROJECT_DIR$/public/index.html" beforeDir="false" afterPath="$PROJECT_DIR$/public/index.html" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src-tauri/src/formatter.rs" beforeDir="false" afterPath="$PROJECT_DIR$/src-tauri/src/formatter.rs" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src-tauri/src/main.rs" beforeDir="false" afterPath="$PROJECT_DIR$/src-tauri/src/main.rs" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src-tauri/src/parser.rs" beforeDir="false" afterPath="$PROJECT_DIR$/src-tauri/src/parser.rs" afterDir="false" />
+    <list default="true" id="7ec1fdf1-6365-4c0c-a6f8-e0c31df81ee8" name="Changes" comment="Show other entries, and navigation on left side to select the entry.">
+      <change beforePath="$PROJECT_DIR$/README.md" beforeDir="false" afterPath="$PROJECT_DIR$/README.md" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -107,7 +104,7 @@
       <option name="number" value="Default" />
       <option name="presentableId" value="Default" />
       <updated>1772719834463</updated>
-      <workItem from="1772719835614" duration="973000" />
+      <workItem from="1772719835614" duration="1286000" />
     </task>
     <task id="LOCAL-00001" summary="init">
       <option name="closed" value="true" />
@@ -117,7 +114,15 @@
       <option name="project" value="LOCAL" />
       <updated>1772719877973</updated>
     </task>
-    <option name="localTasksCounter" value="2" />
+    <task id="LOCAL-00002" summary="Show other entries, and navigation on left side to select the entry.">
+      <option name="closed" value="true" />
+      <created>1772720949309</created>
+      <option name="number" value="00002" />
+      <option name="presentableId" value="LOCAL-00002" />
+      <option name="project" value="LOCAL" />
+      <updated>1772720949309</updated>
+    </task>
+    <option name="localTasksCounter" value="3" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">
@@ -125,6 +130,7 @@
   </component>
   <component name="VcsManagerConfiguration">
     <MESSAGE value="init" />
-    <option name="LAST_COMMIT_MESSAGE" value="init" />
+    <MESSAGE value="Show other entries, and navigation on left side to select the entry." />
+    <option name="LAST_COMMIT_MESSAGE" value="Show other entries, and navigation on left side to select the entry." />
   </component>
 </project>
