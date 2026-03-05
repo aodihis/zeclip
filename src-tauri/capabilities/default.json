@@ -1,0 +1,8 @@
+{
+  "identifier": "default",
+  "description": "Default capabilities for Zeclip",
+  "windows": ["main"],
+  "permissions": [
+    "core:default"
+  ]
+}

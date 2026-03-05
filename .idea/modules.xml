@@ -2,7 +2,7 @@
 <project version="4">
   <component name="ProjectModuleManager">
     <modules>
-      <module fileurl="file://$PROJECT_DIR$/.idea/viewclipboard.iml" filepath="$PROJECT_DIR$/.idea/viewclipboard.iml" />
+      <module fileurl="file://$PROJECT_DIR$/.idea/zeclip.iml" filepath="$PROJECT_DIR$/.idea/zeclip.iml" />
     </modules>
   </component>
 </project>

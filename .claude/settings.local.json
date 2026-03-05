@@ -1,0 +1,11 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(cargo check:*)",
+      "Bash(cargo:*)",
+      "WebFetch(domain:zed.dev)",
+      "WebFetch(domain:docs.rs)",
+      "Bash(mkdir:*)"
+    ]
+  }
+}

@@ -1,0 +1,27 @@
+{
+  "productName": "Zeclip",
+  "version": "0.1.0",
+  "identifier": "com.zeclip.app",
+  "build": {
+    "frontendDist": "../public"
+  },
+  "app": {
+    "withGlobalTauri": true,
+    "windows": [
+      {
+        "title": "Zeclip — Clipboard Viewer",
+        "width": 1000,
+        "height": 700,
+        "resizable": true
+      }
+    ],
+    "security": {
+      "csp": null
+    }
+  },
+  "bundle": {
+    "active": true,
+    "targets": "all",
+    "icon": ["icons/icon.ico"]
+  }
+}
