@@ -1,35 +1,28 @@
-use crate::parser::{ContentKind, FormatBlock, ParsedContent, filemaker_label};
+use crate::parser::{ContentKind, FormatBlock, filemaker_label};
 
-/// Convert all parsed clipboard format blocks into a display string.
-pub fn format(content: &ParsedContent) -> String {
-    match content {
-        ParsedContent::Empty => "--- content-type: empty ---\n[clipboard is empty]\n".to_string(),
-        ParsedContent::Formats(blocks) => blocks
-            .iter()
-            .map(format_block)
-            .collect::<Vec<_>>()
-            .join("\n"),
+/// The content-type tag string for a block.
+pub fn content_kind_label(block: &FormatBlock) -> &'static str {
+    match &block.content {
+        ContentKind::Text(_) => "text",
+        ContentKind::Xml(_) => "xml",
+        ContentKind::Binary { .. } => "binary",
     }
 }
 
-fn format_block(block: &FormatBlock) -> String {
-    // Show a friendly label for known FileMaker formats.
-    let label = filemaker_label(&block.format_name)
-        .map(|l| format!(" ({l})"))
-        .unwrap_or_default();
-
-    let header = format!(
-        "=== format #{} : {}{} ===",
-        block.format_id, block.format_name, label
-    );
-
-    let body = match &block.content {
-        ContentKind::Text(text) => format!("content-type: text/plain\n{text}"),
-        ContentKind::Xml(xml) => format!("content-type: text/xml\n{xml}"),
+/// The rendered body text for a block (without header).
+pub fn format_block_content(block: &FormatBlock) -> String {
+    match &block.content {
+        ContentKind::Text(text) => text.clone(),
+        ContentKind::Xml(xml) => xml.clone(),
         ContentKind::Binary { size, hex_preview } => {
-            format!("content-type: application/octet-stream\nsize: {size} bytes\n{hex_preview}")
+            format!("size: {size} bytes\n{hex_preview}")
         }
-    };
+    }
+}
 
-    format!("{header}\n{body}")
+/// Friendly sidebar label: FileMaker name if known, otherwise format_name.
+pub fn sidebar_label(block: &FormatBlock) -> String {
+    filemaker_label(&block.format_name)
+        .map(|l| l.to_string())
+        .unwrap_or_else(|| block.format_name.clone())
 }

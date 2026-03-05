@@ -20,6 +20,8 @@ pub enum ContentKind {
 pub struct FormatBlock {
     pub format_id: u32,
     pub format_name: String,
+    /// True if this entry is a visual preview/duplicate (e.g. CF_DIB, CF_BITMAP).
+    pub is_preview: bool,
     pub content: ContentKind,
 }
 
@@ -94,8 +96,13 @@ pub fn detect_and_parse(data: &ClipboardData) -> Result<ParsedContent> {
     let blocks: Vec<FormatBlock> = data
         .entries
         .iter()
-        .filter(|e| !is_preview(e, &data.entries))
-        .filter_map(|entry| parse_entry(entry).ok())
+        .filter_map(|entry| {
+            let preview = is_preview(entry, &data.entries);
+            parse_entry(entry).ok().map(|mut b| {
+                b.is_preview = preview;
+                b
+            })
+        })
         .collect();
 
     if blocks.is_empty() {
@@ -137,6 +144,7 @@ fn parse_entry(entry: &ClipboardEntry) -> Result<FormatBlock> {
     Ok(FormatBlock {
         format_id: entry.format_id,
         format_name: entry.format_name.clone(),
+        is_preview: false, // set by detect_and_parse
         content,
     })
 }

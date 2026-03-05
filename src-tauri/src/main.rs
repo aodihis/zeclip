@@ -4,13 +4,42 @@ mod clipboard;
 mod formatter;
 mod parser;
 
+use serde::Serialize;
 use tracing_subscriber::EnvFilter;
 
+#[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
+struct ClipboardBlock {
+    format_id: u32,
+    format_name: String,
+    /// Friendly label for the sidebar (FileMaker name or format_name).
+    label: String,
+    /// True for visual-preview / duplicate formats (CF_DIB, CF_BITMAP, etc.).
+    is_preview: bool,
+    /// "text" | "xml" | "binary"
+    content_kind: String,
+    /// Rendered content body ready for display.
+    formatted_text: String,
+}
+
 #[tauri::command]
-fn read_clipboard() -> Result<String, String> {
+fn read_clipboard() -> Result<Vec<ClipboardBlock>, String> {
     let data = clipboard::read().map_err(|e| e.to_string())?;
     let parsed = parser::detect_and_parse(&data).map_err(|e| e.to_string())?;
-    Ok(formatter::format(&parsed))
+    match parsed {
+        parser::ParsedContent::Empty => Ok(vec![]),
+        parser::ParsedContent::Formats(blocks) => Ok(blocks
+            .iter()
+            .map(|b| ClipboardBlock {
+                format_id: b.format_id,
+                format_name: b.format_name.clone(),
+                label: formatter::sidebar_label(b),
+                is_preview: b.is_preview,
+                content_kind: formatter::content_kind_label(b).to_string(),
+                formatted_text: formatter::format_block_content(b),
+            })
+            .collect()),
+    }
 }
 
 fn main() {
