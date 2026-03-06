@@ -36,8 +36,11 @@ jobs:
             Write-Host "WebView2 already installed: $($webview2.pv)"
           }
 
+      - name: Install cargo-binstall
+        uses: cargo-bins/cargo-binstall@main
+
       - name: Install Tauri CLI
-        run: cargo install tauri-cli --version "^2" --locked
+        run: cargo binstall tauri-cli --version "^2" --locked -y
 
       - name: Build release bundle
         run: cargo tauri build
@@ -45,10 +48,25 @@ jobs:
           TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
           TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
 
-      - name: Upload installer
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: zeclip-windows
+          path: target/release/zeclip.exe
+
+  release:
+    runs-on: ubuntu-latest
+    needs: build
+
+    steps:
+      - name: Download the built artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: zeclip-windows
+          path: .
+
+      - name: Upload to GitHub Release
         uses: softprops/action-gh-release@v2
         with:
-          files: |
-            src-tauri/target/release/bundle/msi/*.msi
-            src-tauri/target/release/bundle/nsis/*.exe
+          files: zeclip.exe
           generate_release_notes: true
