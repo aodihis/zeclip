@@ -1,4 +1,5 @@
 use anyhow::{Context, Result};
+use base64::{Engine as _, engine::general_purpose::STANDARD as BASE64};
 use quick_xml::{Reader, Writer, events::Event};
 use tracing::instrument;
 
@@ -13,6 +14,8 @@ pub enum ContentKind {
     Xml(String),
     /// Raw bytes shown as a hex dump.
     Binary { size: usize, hex_preview: String },
+    /// Bitmap image with a data URL for inline display.
+    Image { width: u32, height: u32, data_url: String },
 }
 
 /// One decoded clipboard format block ready for display.
@@ -23,6 +26,8 @@ pub struct FormatBlock {
     /// True if this entry is a visual preview/duplicate (e.g. CF_DIB, CF_BITMAP).
     pub is_preview: bool,
     pub content: ContentKind,
+    /// Raw bytes from the clipboard for this format (used for binary toggle view).
+    pub raw_bytes: Vec<u8>,
 }
 
 /// All decoded blocks from the clipboard.
@@ -56,14 +61,15 @@ fn is_filemaker_format(name: &str) -> bool {
 /// Format IDs that are always visual previews / rendering hints with no
 /// actionable data content.
 ///
-/// - 2  CF_BITMAP
+/// - 2  CF_BITMAP       (HBITMAP handle, not raw pixel data)
 /// - 3  CF_METAFILEPICT
-/// - 8  CF_DIB
 /// - 9  CF_PALETTE
 /// - 14 CF_ENHMETAFILE
-/// - 17 CF_DIBV5
 /// - 16 CF_LOCALE  (locale tag for the text, not content itself)
-const PREVIEW_FORMAT_IDS: &[u32] = &[2, 3, 8, 9, 14, 16, 17];
+///
+/// CF_DIB (8) and CF_DIBV5 (17) are NOT here — they contain real pixel data
+/// and are decoded as images.
+const PREVIEW_FORMAT_IDS: &[u32] = &[2, 3, 9, 14, 16];
 
 /// Returns true if this entry should be suppressed as a preview / duplicate.
 fn is_preview(entry: &ClipboardEntry, all: &[ClipboardEntry]) -> bool {
@@ -118,6 +124,8 @@ fn parse_entry(entry: &ClipboardEntry) -> Result<FormatBlock> {
         13 => decode_utf16le(&entry.data),
         // CF_TEXT (1) / CF_OEMTEXT (7) — try UTF-8, fall back to Latin-1
         1 | 7 => decode_ansi(&entry.data),
+        // CF_DIB (8) / CF_DIBV5 (17) — Device Independent Bitmap
+        8 | 17 => decode_dib(&entry.data),
         // CF_HTML — UTF-8 with a Windows header block
         _ if entry.format_name == "HTML Format" => decode_ansi(&entry.data),
         // FileMaker formats — 4-byte LE length prefix followed by UTF-8 XML
@@ -146,6 +154,7 @@ fn parse_entry(entry: &ClipboardEntry) -> Result<FormatBlock> {
         format_name: entry.format_name.clone(),
         is_preview: false, // set by detect_and_parse
         content,
+        raw_bytes: entry.data.clone(),
     })
 }
 
@@ -213,6 +222,51 @@ fn decode_best_effort(data: &[u8]) -> ContentKind {
     }
 
     hex_block(data)
+}
+
+/// Decode a CF_DIB or CF_DIBV5 clipboard entry into a displayable image.
+///
+/// Both formats are a raw BITMAPINFO (no file header). We prepend a
+/// BITMAPFILEHEADER (14 bytes) to form a valid BMP, then base64-encode it as a
+/// data URL that the browser can display directly.
+fn decode_dib(data: &[u8]) -> ContentKind {
+    // Need at least a BITMAPINFOHEADER (40 bytes).
+    if data.len() < 40 {
+        return hex_block(data);
+    }
+
+    let bi_size = u32::from_le_bytes([data[0], data[1], data[2], data[3]]) as usize;
+    if data.len() < bi_size {
+        return hex_block(data);
+    }
+
+    let width = i32::from_le_bytes([data[4], data[5], data[6], data[7]]).unsigned_abs();
+    let height = i32::from_le_bytes([data[8], data[9], data[10], data[11]]).unsigned_abs();
+    let bit_count = u16::from_le_bytes([data[14], data[15]]);
+    let clr_used = u32::from_le_bytes([data[32], data[33], data[34], data[35]]);
+
+    // Number of RGBQUAD entries in the color table.
+    let color_entries = if clr_used > 0 {
+        clr_used as usize
+    } else if bit_count <= 8 {
+        1usize << bit_count
+    } else {
+        0
+    };
+
+    let bf_off_bits = (14 + bi_size + color_entries * 4) as u32;
+    let bf_size = (14 + data.len()) as u32;
+
+    // Build a BMP file in memory: 14-byte file header + DIB data.
+    let mut bmp = Vec::with_capacity(14 + data.len());
+    bmp.extend_from_slice(b"BM");
+    bmp.extend_from_slice(&bf_size.to_le_bytes());
+    bmp.extend_from_slice(&[0u8; 4]); // reserved
+    bmp.extend_from_slice(&bf_off_bits.to_le_bytes());
+    bmp.extend_from_slice(data);
+
+    let data_url = format!("data:image/bmp;base64,{}", BASE64.encode(&bmp));
+    ContentKind::Image { width, height, data_url }
 }
 
 fn hex_block(data: &[u8]) -> ContentKind {

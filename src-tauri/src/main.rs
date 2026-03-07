@@ -20,6 +20,10 @@ struct ClipboardBlock {
     content_kind: String,
     /// Rendered content body ready for display.
     formatted_text: String,
+    /// Hex dump of the raw clipboard bytes for this format.
+    hex_dump: String,
+    /// For image formats: a data URL (data:image/bmp;base64,…) ready for <img src>.
+    image_data_url: Option<String>,
 }
 
 #[tauri::command]
@@ -37,6 +41,8 @@ fn read_clipboard() -> Result<Vec<ClipboardBlock>, String> {
                 is_preview: b.is_preview,
                 content_kind: formatter::content_kind_label(b).to_string(),
                 formatted_text: formatter::format_block_content(b),
+                hex_dump: formatter::format_hex(&b.raw_bytes),
+                image_data_url: formatter::image_data_url(b).map(str::to_string),
             })
             .collect()),
     }

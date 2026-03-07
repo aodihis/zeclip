@@ -1,7 +1,7 @@
 {
   "productName": "Zeclip",
   "version": "0.1.0",
-  "identifier": "com.zeclip.app",
+  "identifier": "com.zeclip",
   "build": {
     "frontendDist": "../public"
   },
