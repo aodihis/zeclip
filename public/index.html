@@ -238,7 +238,7 @@
       const block = blocks[selectedIndex];
       if (!block) return;
 
-      const isImage = block.contentKind === 'image' && !showingBinary;
+      const isImage = block.contentKind === 'image' && !showingBinary && block.imageDataUrl;
       const isBinaryKind = block.contentKind === 'binary';
 
       if (isImage) {

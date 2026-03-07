@@ -224,19 +224,29 @@ fn decode_best_effort(data: &[u8]) -> ContentKind {
     hex_block(data)
 }
 
+/// Images larger than this are not encoded as data URLs to avoid crashing
+/// WebView2 with an oversized IPC payload.
+const MAX_INLINE_IMAGE_BYTES: usize = 8 * 1024 * 1024; // 8 MB
+
 /// Decode a CF_DIB or CF_DIBV5 clipboard entry into a displayable image.
 ///
 /// Both formats are a raw BITMAPINFO (no file header). We prepend a
 /// BITMAPFILEHEADER (14 bytes) to form a valid BMP, then base64-encode it as a
 /// data URL that the browser can display directly.
+///
+/// Returns `ContentKind::Image { data_url: String::new() }` (empty data URL)
+/// when the image is too large to safely send over the Tauri IPC.
 fn decode_dib(data: &[u8]) -> ContentKind {
-    // Need at least a BITMAPINFOHEADER (40 bytes).
+    // Need at least a full BITMAPINFOHEADER (40 bytes).
     if data.len() < 40 {
         return hex_block(data);
     }
 
     let bi_size = u32::from_le_bytes([data[0], data[1], data[2], data[3]]) as usize;
-    if data.len() < bi_size {
+
+    // bi_size < 40 means a legacy BITMAPCOREHEADER; field offsets differ so we
+    // cannot safely read biBitCount/biClrUsed at their BITMAPINFOHEADER positions.
+    if bi_size < 40 || data.len() < bi_size {
         return hex_block(data);
     }
 
@@ -246,16 +256,31 @@ fn decode_dib(data: &[u8]) -> ContentKind {
     let clr_used = u32::from_le_bytes([data[32], data[33], data[34], data[35]]);
 
     // Number of RGBQUAD entries in the color table.
+    // Cap at a sane maximum (256 entries) to guard against corrupt headers.
     let color_entries = if clr_used > 0 {
-        clr_used as usize
+        (clr_used as usize).min(256)
     } else if bit_count <= 8 {
-        1usize << bit_count
+        1usize << bit_count  // 1, 2, 4, or 8 bpp → at most 256 entries
     } else {
         0
     };
 
-    let bf_off_bits = (14 + bi_size + color_entries * 4) as u32;
-    let bf_size = (14 + data.len()) as u32;
+    let bf_off_bits = 14_u32
+        .saturating_add(bi_size as u32)
+        .saturating_add((color_entries * 4) as u32);
+    let bf_size = 14_u32.saturating_add(data.len() as u32);
+
+    // Refuse to encode images that would produce an IPC payload large enough
+    // to crash WebView2 (typically seen with 4K screenshots).
+    if data.len() > MAX_INLINE_IMAGE_BYTES {
+        tracing::debug!(
+            width,
+            height,
+            bytes = data.len(),
+            "Image too large for inline preview"
+        );
+        return ContentKind::Image { width, height, data_url: String::new() };
+    }
 
     // Build a BMP file in memory: 14-byte file header + DIB data.
     let mut bmp = Vec::with_capacity(14 + data.len());

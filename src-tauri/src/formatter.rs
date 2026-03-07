@@ -43,8 +43,12 @@ pub fn format_block_content(block: &FormatBlock) -> String {
         ContentKind::Binary { size, hex_preview } => {
             format!("size: {size} bytes\n{hex_preview}")
         }
-        ContentKind::Image { width, height, .. } => {
-            format!("[BMP {width}\u{d7}{height}]")
+        ContentKind::Image { width, height, data_url } => {
+            if data_url.is_empty() {
+                format!("[BMP {width}\u{d7}{height} — too large for inline preview, use Show Binary]")
+            } else {
+                format!("[BMP {width}\u{d7}{height}]")
+            }
         }
     }
 }
