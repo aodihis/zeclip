@@ -34,8 +34,22 @@ pub fn read() -> Result<ClipboardData> {
 
     let mut entries = Vec::new();
 
+    // These formats store GDI object handles (HBITMAP, HPALETTE, HENHMETAFILE),
+    // not global memory blocks. Calling GlobalLock on them corrupts the heap.
+    const GDI_HANDLE_FORMATS: &[u32] = &[
+        2,  // CF_BITMAP
+        9,  // CF_PALETTE
+        14, // CF_ENHMETAFILE
+    ];
+
     for fmt_id in EnumFormats::new() {
         let format_name = format_name(fmt_id);
+
+        if GDI_HANDLE_FORMATS.contains(&fmt_id) {
+            tracing::debug!(format = %format_name, "Skipped GDI handle format");
+            continue;
+        }
+
         let mut buf = Vec::new();
 
         match raw::get_vec(fmt_id, &mut buf) {
@@ -92,3 +106,4 @@ fn format_name(id: u32) -> String {
         format!("#{id}")
     }
 }
+
